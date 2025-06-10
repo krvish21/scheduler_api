@@ -1,5 +1,5 @@
 import { EmailDbRequest, InsertEmailDbRequest } from "../models/emailDbRequest.js";
-import { parseDate, convertToUTC } from "../utils/index.js";
+import { parseDate, convertToUTC, convertToServerTime } from "../utils/index.js";
 import { DbService } from './dbService.js';
 import { sendEmail } from './resendService.js';
 import { format, formatDistanceToNow, differenceInMilliseconds } from 'date-fns';
@@ -32,7 +32,7 @@ export class SchedulerService {
     static async checkAndProcessEmails() {
         try {
             const pendingEmails: EmailDbRequest[] = await DbService.findAllPending();
-            const currentTime = convertToUTC(new Date());
+            const currentTime = new Date();
 
             // Reset rate limiting counter if we're in a new time window
             if (currentTime.getTime() - this.lastProcessedTime >= RATE_LIMIT.timeWindowMs) {
@@ -42,7 +42,7 @@ export class SchedulerService {
 
             // Filter emails that are due within the processing window
             const dueEmails = pendingEmails.filter(email => {
-                const scheduledTime = parseDate(email.scheduled_for);
+                const scheduledTime = convertToServerTime(email.scheduled_for);
                 const timeDiff = differenceInMilliseconds(scheduledTime, currentTime);
                 return timeDiff <= 0 && timeDiff >= -PROCESSING_WINDOW_MS;
             });
@@ -84,16 +84,23 @@ export class SchedulerService {
                 console.log(`${remainingPending} emails still pending for future delivery`);
                 // Log the next scheduled email
                 const nextScheduled = pendingEmails
-                    .filter(email => parseDate(email.scheduled_for).getTime() > currentTime.getTime())
-                    .sort((a, b) => parseDate(a.scheduled_for).getTime() - parseDate(b.scheduled_for).getTime())[0];
+                    .filter(email => {
+                        const scheduledTime = convertToServerTime(email.scheduled_for);
+                        return scheduledTime.getTime() > currentTime.getTime();
+                    })
+                    .sort((a, b) => {
+                        const timeA = convertToServerTime(a.scheduled_for);
+                        const timeB = convertToServerTime(b.scheduled_for);
+                        return timeA.getTime() - timeB.getTime();
+                    })[0];
                 
                 if (nextScheduled) {
-                    const nextScheduledTime = parseDate(nextScheduled.scheduled_for);
+                    const nextScheduledTime = convertToServerTime(nextScheduled.scheduled_for);
                     const timeUntilNext = differenceInMilliseconds(nextScheduledTime, currentTime);
                     console.log('Next scheduled email:', {
                         id: nextScheduled.id,
-                        scheduledForUTC: format(nextScheduledTime, "yyyy-MM-dd'T'HH:mm:ss'Z'"),
-                        scheduledForServer: format(toZonedTime(nextScheduledTime, SERVER_TIMEZONE), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+                        scheduledForUTC: format(parseDate(nextScheduled.scheduled_for), "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+                        scheduledForServer: format(nextScheduledTime, "yyyy-MM-dd'T'HH:mm:ssXXX"),
                         timeUntilDue: formatDistanceToNow(nextScheduledTime, { addSuffix: true })
                     });
                 }
