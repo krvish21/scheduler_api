@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { emailRouter } from './routes/emailRoutes.js';
+import emailRouter from './routes/emailRoutes.js';
 import { SchedulerService } from './services/schedulerService.js';
 
 const app = express();
