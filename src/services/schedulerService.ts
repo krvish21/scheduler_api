@@ -1,7 +1,7 @@
 import { EmailDbRequest, InsertEmailDbRequest } from "../models/emailDbRequest.js";
 import { DbService } from './dbService.js';
 import { sendEmail } from './resendService.js';
-import { format, formatDistanceToNow, parseISO, isValid } from 'date-fns';
+import { format, formatDistanceToNow, parseISO, isValid, differenceInMilliseconds } from 'date-fns';
 import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 // Rate limiting configuration
@@ -74,14 +74,16 @@ export class SchedulerService {
             // Filter emails that are due within the processing window
             const dueEmails = pendingEmails.filter(email => {
                 const scheduledTime = this.parseDate(email.scheduled_for);
-                const timeDiff = scheduledTime.getTime() - currentTime.getTime();
+                const timeDiff = differenceInMilliseconds(scheduledTime, currentTime);
                 
                 // Log detailed information about each email
                 console.log(`Email ${email.id}:`, {
                     scheduledTime: formatInTimeZone(scheduledTime, SERVER_TIMEZONE, 'yyyy-MM-dd HH:mm:ss zzz'),
                     currentTime: formatInTimeZone(currentTime, SERVER_TIMEZONE, 'yyyy-MM-dd HH:mm:ss zzz'),
                     timeDiffMs: timeDiff,
-                    timeUntilDue: formatDistanceToNow(scheduledTime, { addSuffix: true }),
+                    timeUntilDue: timeDiff > 0 ? 
+                        `in ${formatDistanceToNow(scheduledTime, { addSuffix: false })}` : 
+                        `${formatDistanceToNow(scheduledTime, { addSuffix: true })}`,
                     isDue: timeDiff <= 0 && timeDiff >= -PROCESSING_WINDOW_MS,
                     status: email.status
                 });
@@ -131,10 +133,13 @@ export class SchedulerService {
                 
                 if (nextScheduled) {
                     const nextScheduledTime = this.parseDate(nextScheduled.scheduled_for);
+                    const timeUntilNext = differenceInMilliseconds(nextScheduledTime, currentTime);
                     console.log('Next scheduled email:', {
                         id: nextScheduled.id,
                         scheduledFor: formatInTimeZone(nextScheduledTime, SERVER_TIMEZONE, 'yyyy-MM-dd HH:mm:ss zzz'),
-                        timeUntilDue: formatDistanceToNow(nextScheduledTime, { addSuffix: true })
+                        timeUntilDue: timeUntilNext > 0 ? 
+                            `in ${formatDistanceToNow(nextScheduledTime, { addSuffix: false })}` : 
+                            `${formatDistanceToNow(nextScheduledTime, { addSuffix: true })}`
                     });
                 }
             }
