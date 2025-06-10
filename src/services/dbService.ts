@@ -1,10 +1,12 @@
 import { InsertEmailDbRequest } from "../models/emailDbRequest.js";
 import supabase from "../config/db.js";
-import { format } from "date-fns";
+import { parseDate } from "../utils/index.js";
 
 export class DbService {
     static async createEmail(email: InsertEmailDbRequest) {
-        email['scheduled_for'] = format(new Date(email['scheduled_for']), 'yyyy-MM-dd HH:mm:ss')
+        
+        const scheduledDate = parseDate(email['scheduled_for']);
+        email['scheduled_for'] = scheduledDate.toISOString();
         const { error: supabaseError } = await supabase.from('email')
         .insert([email]);
 

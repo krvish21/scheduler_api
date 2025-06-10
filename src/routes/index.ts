@@ -3,6 +3,6 @@ import emailRoutes from './emailRoutes.js';
 
 const router = Router();
 
-router.use('/email', emailRoutes);
+router.use('/task', emailRoutes);
 
 export default router;

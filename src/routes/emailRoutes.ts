@@ -1,8 +1,8 @@
-import { Router } from 'express';
-import { sendEmail } from '../controllers/emailController.js';
+import { Router, RequestHandler } from 'express';
+import { createTask } from '../controllers/emailController.js';
 
 const router = Router();
 
-router.post('/send', sendEmail);
+router.post('/create', createTask as RequestHandler);
 
 export default router;
