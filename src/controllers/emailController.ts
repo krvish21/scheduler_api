@@ -16,6 +16,11 @@ export const createTask = async (req: Request, res: Response) => {
         const now = new Date();
         
         if (scheduledDate < now) {
+            console.warn('[Email Task] Invalid schedule time:', {
+                requestedTime: scheduledFor,
+                serverTime: now.toISOString(),
+                timezone: SERVER_TIMEZONE
+            });
             return res.status(400).json({ 
                 error: "Scheduled time must be in the future",
                 serverTime: now.toISOString(),
@@ -32,14 +37,19 @@ export const createTask = async (req: Request, res: Response) => {
             status: 'pending'
         };
 
-        console.log('Creating task with server time:', {
+        console.info('[Email Task] Creating new task:', {
+            to: email,
+            subject,
             originalTime: scheduledFor,
             serverTime: scheduledDate.toISOString(),
             timezone: SERVER_TIMEZONE
         });
 
         const response = await DbService.createEmail(payload);
-        console.log('Task created successfully:', { payload, response });
+        console.info('[Email Task] Task created successfully:', {
+            scheduledTime: scheduledDate.toISOString(),
+            status: 'pending'
+        });
 
         res.status(200).json({ 
             message: "Task created successfully",
@@ -47,7 +57,10 @@ export const createTask = async (req: Request, res: Response) => {
             timezone: SERVER_TIMEZONE
         });
     } catch (error) {
-        console.error('Failed to create task:', error);
+        console.error('[Email Task] Failed to create task:', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+        });
         res.status(500).json({ 
             error: "Failed to create task",
             timezone: SERVER_TIMEZONE

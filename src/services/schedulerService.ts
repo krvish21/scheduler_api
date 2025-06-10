@@ -95,9 +95,7 @@ export class SchedulerService {
                         id: nextScheduled.id,
                         scheduledForUTC: format(nextScheduledTime, "yyyy-MM-dd'T'HH:mm:ss'Z'"),
                         scheduledForServer: format(toZonedTime(nextScheduledTime, SERVER_TIMEZONE), "yyyy-MM-dd'T'HH:mm:ssXXX"),
-                        timeUntilDue: timeUntilNext > 0 ? 
-                            `in ${formatDistanceToNow(nextScheduledTime, { addSuffix: false })}` : 
-                            `${formatDistanceToNow(nextScheduledTime, { addSuffix: true })}`
+                        timeUntilDue: formatDistanceToNow(nextScheduledTime, { addSuffix: true })
                     });
                 }
             }
