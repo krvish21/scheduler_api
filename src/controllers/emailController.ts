@@ -47,7 +47,8 @@ export const createTask = async (req: Request, res: Response) => {
             subject,
             body: message,
             scheduled_for: utcScheduledTime.toISOString(),
-            status: 'pending'
+            status: 'pending',
+            timezone: SERVER_TIMEZONE
         };
 
         console.info('[Email Task] Creating new task:', {
