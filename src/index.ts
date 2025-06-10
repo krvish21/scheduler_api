@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import cors from 'cors';
 import emailRouter from './routes/emailRoutes.js';
 import { SchedulerService } from './services/schedulerService.js';
@@ -6,24 +6,13 @@ import { SchedulerService } from './services/schedulerService.js';
 const app = express();
 const port = process.env.PORT || 3000;
 
-// CORS configuration
 app.use(cors({
-    origin: 'https://scheduler-fe-silk.vercel.app',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    exposedHeaders: ['Content-Type', 'Authorization'],
-    credentials: false,
-    maxAge: 86400 // 24 hours
+  origin: 'https://scheduler-fe-silk.vercel.app',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
 }));
 
-// Add CORS headers middleware
-app.use((req: Request, res: Response, next: NextFunction) => {
-    res.setHeader('Access-Control-Allow-Origin', 'https://scheduler-fe-silk.vercel.app');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Access-Control-Max-Age', '86400');
-    next();
-});
 
 app.use(express.json());
 
