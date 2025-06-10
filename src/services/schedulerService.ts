@@ -1,5 +1,5 @@
 import { EmailDbRequest, InsertEmailDbRequest } from "../models/emailDbRequest.js";
-import { parseDate } from "../utils/index.js";
+import { parseDate, convertToUTC } from "../utils/index.js";
 import { DbService } from './dbService.js';
 import { sendEmail } from './resendService.js';
 import { format, formatDistanceToNow, differenceInMilliseconds } from 'date-fns';
@@ -15,6 +15,7 @@ const RATE_LIMIT = {
 const PROCESSING_WINDOW_MS = 60 * 1000; // 1 minute window
 
 // Get server timezone dynamically
+const SERVER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 // Define the input payload type
 interface EmailPayload {
@@ -28,11 +29,10 @@ export class SchedulerService {
     private static lastProcessedTime: number = 0;
     private static emailsProcessedInWindow: number = 0;
 
-
     static async checkAndProcessEmails() {
         try {
             const pendingEmails: EmailDbRequest[] = await DbService.findAllPending();
-            const currentTime = new Date();
+            const currentTime = convertToUTC(new Date());
 
             // Reset rate limiting counter if we're in a new time window
             if (currentTime.getTime() - this.lastProcessedTime >= RATE_LIMIT.timeWindowMs) {
@@ -81,7 +81,6 @@ export class SchedulerService {
             // Log remaining pending emails
             const remainingPending = pendingEmails.length - dueEmails.length;
             if (remainingPending > 0) {
-                const SERVER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
                 console.log(`${remainingPending} emails still pending for future delivery`);
                 // Log the next scheduled email
                 const nextScheduled = pendingEmails

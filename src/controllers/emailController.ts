@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { EmailApiRequest } from '../models/emailApiRequest.js';
 import { InsertEmailDbRequest } from '../models/emailDbRequest.js';
 import { DbService } from '../services/dbService.js';
-import { convertToServerTime } from '../utils/index.js';
+import { convertToServerTime, convertToUTC } from '../utils/index.js';
+import { parseISO, isValid } from 'date-fns';
 
 const FROM = process.env.FROM_EMAIL || 'noreply@example.com';
 const SERVER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles';
@@ -11,11 +12,20 @@ export const createTask = async (req: Request, res: Response) => {
     try {
         const { email, subject, message, scheduledFor } = req.body as EmailApiRequest;
         
-        // Convert to server time and validate
-        const scheduledDate = convertToServerTime(scheduledFor);
+        // Parse and validate the scheduled time
+        const scheduledDate = parseISO(scheduledFor);
+        if (!isValid(scheduledDate)) {
+            return res.status(400).json({ 
+                error: "Invalid date format",
+                timezone: SERVER_TIMEZONE
+            });
+        }
+
+        // Convert to server time for validation
+        const serverTime = convertToServerTime(scheduledFor);
         const now = new Date();
         
-        if (scheduledDate < now) {
+        if (serverTime < now) {
             console.warn('[Email Task] Invalid schedule time:', {
                 requestedTime: scheduledFor,
                 serverTime: now.toISOString(),
@@ -28,12 +38,15 @@ export const createTask = async (req: Request, res: Response) => {
             });
         }
 
+        // Ensure we store in UTC
+        const utcScheduledTime = convertToUTC(serverTime);
+
         const payload: InsertEmailDbRequest = {
             to: email,
             from: FROM,
             subject,
             body: message,
-            scheduled_for: scheduledDate.toISOString(),
+            scheduled_for: utcScheduledTime.toISOString(),
             status: 'pending'
         };
 
@@ -41,19 +54,20 @@ export const createTask = async (req: Request, res: Response) => {
             to: email,
             subject,
             originalTime: scheduledFor,
-            serverTime: scheduledDate.toISOString(),
+            utcTime: utcScheduledTime.toISOString(),
+            serverTime: serverTime.toISOString(),
             timezone: SERVER_TIMEZONE
         });
 
         const response = await DbService.createEmail(payload);
         console.info('[Email Task] Task created successfully:', {
-            scheduledTime: scheduledDate.toISOString(),
+            scheduledTime: utcScheduledTime.toISOString(),
             status: 'pending'
         });
 
         res.status(200).json({ 
             message: "Task created successfully",
-            scheduledTime: scheduledDate.toISOString(),
+            scheduledTime: utcScheduledTime.toISOString(),
             timezone: SERVER_TIMEZONE
         });
     } catch (error) {
