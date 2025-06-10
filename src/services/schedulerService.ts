@@ -14,8 +14,8 @@ const RATE_LIMIT = {
 // Time window for processing emails (in milliseconds)
 const PROCESSING_WINDOW_MS = 60 * 1000; // 1 minute window
 
-// Get server timezone dynamically
-const SERVER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+// Get server timezone from utils
+const SERVER_TIMEZONE = 'Asia/Kolkata';
 
 // Define the input payload type
 interface EmailPayload {

@@ -1,6 +1,9 @@
 import { parseISO, isValid } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 
+// Force the server timezone to be Asia/Kolkata (IST)
+const SERVER_TIMEZONE = 'Asia/Kolkata';
+
 export function parseDate(dateStr: string): Date {
     try {
         const date = parseISO(dateStr);
@@ -15,7 +18,6 @@ export function parseDate(dateStr: string): Date {
 }
 
 export function convertToServerTime(utcTime: string): Date {
-    const SERVER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const date = parseDate(utcTime);
     return toZonedTime(date, SERVER_TIMEZONE);
 }
