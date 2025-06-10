@@ -1,5 +1,5 @@
 import { parseISO, isValid } from 'date-fns';
-import { toZonedTime, zonedTimeToUtc } from 'date-fns-tz';
+import { toZonedTime } from 'date-fns-tz';
 
 export function parseDate(dateStr: string): Date {
     try {
@@ -21,5 +21,6 @@ export function convertToServerTime(utcTime: string): Date {
 }
 
 export function convertToUTC(date: Date): Date {
-    return zonedTimeToUtc(date, Intl.DateTimeFormat().resolvedOptions().timeZone);
+    // Since the input date is already in UTC, we just need to ensure it's properly formatted
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000);
 }
