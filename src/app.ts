@@ -9,15 +9,11 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-// CORS configuration
-const corsOptions = {
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
-};
+app.use(cors({
+    origin: 'https://scheduler-fe-silk.vercel.app',
+    credentials: true,
+}));
 
-app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/api/v1', routes);
 
