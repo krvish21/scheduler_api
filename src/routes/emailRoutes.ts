@@ -4,7 +4,7 @@ import { createTask, listPendingTasks, listCompletedTasks } from '../controllers
 const router = Router();
 
 router.post('/create', createTask as RequestHandler);
-router.post('/fetch/pending', listPendingTasks as RequestHandler);
-router.post('/fetch/completed', listCompletedTasks as RequestHandler);
+router.get('/fetch/pending', listPendingTasks as RequestHandler);
+router.get('/fetch/completed', listCompletedTasks as RequestHandler);
 
 export default router;
