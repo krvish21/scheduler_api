@@ -2,7 +2,7 @@ import { EmailDbRequest, InsertEmailDbRequest } from "../models/emailDbRequest.j
 import { parseDate, convertToUTC, convertToServerTime } from "../utils/index.js";
 import { DbService } from './dbService.js';
 import { sendEmail } from './resendService.js';
-import { format, formatDistanceToNow, differenceInMilliseconds } from 'date-fns';
+import { format, formatDistanceToNow, differenceInMilliseconds, isBefore, isAfter } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 
 // Rate limiting configuration
@@ -45,6 +45,16 @@ export class SchedulerService {
             const dueEmails = pendingEmails.filter(email => {
                 const scheduledTime = parseDate(email.scheduled_for);
                 const timeDiff = differenceInMilliseconds(scheduledTime, currentTime);
+                
+                // Log each email's time comparison
+                console.log('Email time check:', {
+                    emailId: email.id,
+                    scheduledTime: format(scheduledTime, "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+                    currentTime: format(currentTime, "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+                    timeDiff,
+                    isDue: timeDiff <= 0 && timeDiff >= -PROCESSING_WINDOW_MS
+                });
+
                 return timeDiff <= 0 && timeDiff >= -PROCESSING_WINDOW_MS;
             });
 
@@ -58,6 +68,13 @@ export class SchedulerService {
                 }
 
                 try {
+                    console.log('Sending email:', {
+                        to: email.to,
+                        from: email.from,
+                        subject: email.subject,
+                        scheduledFor: email.scheduled_for
+                    });
+
                     const response = await sendEmail({
                         to: email.to,
                         from: email.from,
@@ -87,7 +104,7 @@ export class SchedulerService {
                 const nextScheduled = pendingEmails
                     .filter(email => {
                         const scheduledTime = parseDate(email.scheduled_for);
-                        return scheduledTime.getTime() > currentTime.getTime();
+                        return isAfter(scheduledTime, currentTime);
                     })
                     .sort((a, b) => {
                         const timeA = parseDate(a.scheduled_for);
