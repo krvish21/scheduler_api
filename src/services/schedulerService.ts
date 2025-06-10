@@ -97,6 +97,15 @@ export class SchedulerService {
                 if (nextScheduled) {
                     const nextScheduledTime = convertToServerTime(nextScheduled.scheduled_for);
                     const timeUntilNext = differenceInMilliseconds(nextScheduledTime, currentTime);
+                    
+                    // Debug log to check times
+                    console.log('Time Debug:', {
+                        currentTime: format(currentTime, "yyyy-MM-dd'T'HH:mm:ssXXX"),
+                        scheduledTime: format(nextScheduledTime, "yyyy-MM-dd'T'HH:mm:ssXXX"),
+                        timeDiff: timeUntilNext,
+                        serverTimezone: SERVER_TIMEZONE
+                    });
+
                     console.log('Next scheduled email:', {
                         id: nextScheduled.id,
                         scheduledForUTC: format(parseDate(nextScheduled.scheduled_for), "yyyy-MM-dd'T'HH:mm:ss'Z'"),
