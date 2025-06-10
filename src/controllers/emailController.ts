@@ -67,3 +67,25 @@ export const createTask = async (req: Request, res: Response) => {
         });
     }
 }
+
+export const listPendingTasks = async (req: Request, res: Response) => {
+    try {
+        const response = await DbService.findAllPending();
+        res.status(200).json(response);
+    } catch (error) {
+        res.status(500).json({ 
+            error: "Failed to fetch pending tasks"
+        });
+    }
+}
+
+export const listCompletedTasks = async (req: Request, res: Response) => {
+    try {
+        const response = await DbService.findAllSent();
+        res.status(200).json(response);
+    } catch (error) {
+        res.status(500).json({ 
+            error: "Failed to fetch completed tasks"
+        });
+    }
+}

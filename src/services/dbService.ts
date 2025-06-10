@@ -29,6 +29,18 @@ export class DbService {
         return data;
     }
 
+    static async findAllSent() {
+        const { data, error: supabaseError } = await supabase.from('email')
+        .select('*').eq('status', 'sent');
+        
+        if(supabaseError) {
+            console.error(supabaseError);
+            throw supabaseError;
+        }
+
+        return data;
+    }
+
     static async updateEmailStatus(id: string, status: string) {
         const { error: supabaseError } = await supabase.from('email')
             .update({ status })
