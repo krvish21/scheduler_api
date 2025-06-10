@@ -2,6 +2,7 @@ import { EmailDbRequest, InsertEmailDbRequest } from "../models/emailDbRequest.j
 import { DbService } from './dbService.js';
 import { sendEmail } from './resendService.js';
 import { format, formatDistanceToNow, parseISO, isValid } from 'date-fns';
+import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 // Rate limiting configuration
 const RATE_LIMIT = {
@@ -12,12 +13,16 @@ const RATE_LIMIT = {
 // Time window for processing emails (in milliseconds)
 const PROCESSING_WINDOW_MS = 60 * 1000; // 1 minute window
 
+// Server timezone (Oregon, US West)
+const SERVER_TIMEZONE = 'America/Los_Angeles';
+
 // Define the input payload type
 interface EmailPayload {
     subject: string;
     email: string;
     message: string;
     scheduledFor: string;
+    timezone?: string; // Optional timezone, defaults to server timezone
 }
 
 export class SchedulerService {
@@ -25,28 +30,39 @@ export class SchedulerService {
     private static lastProcessedTime: number = 0;
     private static emailsProcessedInWindow: number = 0;
 
-    private static parseDate(dateStr: string): Date {
-        // Always try to parse as ISO string first
-        const isoDate = parseISO(dateStr);
-        if (isValid(isoDate)) {
-            return isoDate;
-        }
+    private static parseDate(dateStr: string, timezone: string = SERVER_TIMEZONE): Date {
+        try {
+            // Always try to parse as ISO string first
+            const isoDate = parseISO(dateStr);
+            if (isValid(isoDate)) {
+                // Convert to server timezone
+                return toZonedTime(isoDate, timezone);
+            }
 
-        // If not valid ISO, try parsing as local date string
-        const localDate = new Date(dateStr);
-        if (isValid(localDate)) {
-            return localDate;
-        }
+            // If not valid ISO, try parsing as local date string
+            const localDate = new Date(dateStr);
+            if (isValid(localDate)) {
+                // Convert to server timezone
+                return toZonedTime(localDate, timezone);
+            }
 
-        throw new Error(`Invalid date format: ${dateStr}`);
+            throw new Error(`Invalid date format: ${dateStr}`);
+        } catch (error) {
+            console.error('Error parsing date:', error);
+            throw error;
+        }
+    }
+
+    private static convertToUTC(date: Date, timezone: string = SERVER_TIMEZONE): Date {
+        return fromZonedTime(date, timezone);
     }
 
     static async checkAndProcessEmails() {
         try {
             const pendingEmails: EmailDbRequest[] = await DbService.findAllPending();
-            const currentTime = new Date();
+            const currentTime = toZonedTime(new Date(), SERVER_TIMEZONE);
 
-            console.log('Current time:', format(currentTime, 'yyyy-MM-dd HH:mm:ss'));
+            console.log('Current server time:', formatInTimeZone(currentTime, SERVER_TIMEZONE, 'yyyy-MM-dd HH:mm:ss zzz'));
             console.log('Total pending emails:', pendingEmails.length);
 
             // Reset rate limiting counter if we're in a new time window
@@ -62,17 +78,14 @@ export class SchedulerService {
                 
                 // Log detailed information about each email
                 console.log(`Email ${email.id}:`, {
-                    scheduledTime: format(scheduledTime, 'yyyy-MM-dd HH:mm:ss'),
-                    currentTime: format(currentTime, 'yyyy-MM-dd HH:mm:ss'),
+                    scheduledTime: formatInTimeZone(scheduledTime, SERVER_TIMEZONE, 'yyyy-MM-dd HH:mm:ss zzz'),
+                    currentTime: formatInTimeZone(currentTime, SERVER_TIMEZONE, 'yyyy-MM-dd HH:mm:ss zzz'),
                     timeDiffMs: timeDiff,
                     timeUntilDue: formatDistanceToNow(scheduledTime, { addSuffix: true }),
                     isDue: timeDiff <= 0 && timeDiff >= -PROCESSING_WINDOW_MS,
                     status: email.status
                 });
 
-                // An email is due if:
-                // 1. It's scheduled time is in the past (timeDiff <= 0)
-                // 2. AND it's within our processing window (timeDiff >= -PROCESSING_WINDOW_MS)
                 return timeDiff <= 0 && timeDiff >= -PROCESSING_WINDOW_MS;
             });
 
@@ -120,7 +133,7 @@ export class SchedulerService {
                     const nextScheduledTime = this.parseDate(nextScheduled.scheduled_for);
                     console.log('Next scheduled email:', {
                         id: nextScheduled.id,
-                        scheduledFor: format(nextScheduledTime, 'yyyy-MM-dd HH:mm:ss'),
+                        scheduledFor: formatInTimeZone(nextScheduledTime, SERVER_TIMEZONE, 'yyyy-MM-dd HH:mm:ss zzz'),
                         timeUntilDue: formatDistanceToNow(nextScheduledTime, { addSuffix: true })
                     });
                 }
@@ -134,19 +147,21 @@ export class SchedulerService {
     // Add method to handle new email payload
     static async scheduleEmail(payload: EmailPayload): Promise<void> {
         try {
-            const scheduledDate = this.parseDate(payload.scheduledFor);
+            const timezone = payload.timezone || SERVER_TIMEZONE;
+            const scheduledDate = this.parseDate(payload.scheduledFor, timezone);
+            const utcDate = this.convertToUTC(scheduledDate, timezone);
             
             const emailRequest = new InsertEmailDbRequest(
                 payload.email,  // to
                 payload.email,  // from (using same email as sender)
                 payload.subject,
                 payload.message,
-                payload.scheduledFor, // Keep the original ISO format
+                utcDate.toISOString(), // Store in UTC
                 'pending'
             );
 
             await DbService.createEmail(emailRequest);
-            console.log(`Email scheduled for ${format(scheduledDate, 'yyyy-MM-dd HH:mm:ss')}`);
+            console.log(`Email scheduled for ${formatInTimeZone(scheduledDate, timezone, 'yyyy-MM-dd HH:mm:ss zzz')}`);
         } catch (error) {
             console.error('Error scheduling email:', error);
             throw error;

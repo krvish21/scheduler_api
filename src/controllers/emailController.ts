@@ -2,19 +2,29 @@ import { Request, Response } from 'express';
 import { EmailApiRequest } from '../models/emailApiRequest.js';
 import { InsertEmailDbRequest } from '../models/emailDbRequest.js';
 import { DbService } from '../services/dbService.js';
+import { SchedulerService } from '../services/schedulerService.js';
 
 const FROM = process.env.FROM_EMAIL || 'noreply@example.com';
 
 export const sendEmail = async (req: Request, res: Response) => {
     try {
-        const { email, subject, message, scheduledFor } = req.body as EmailApiRequest;
-        const emailDbRequest = new InsertEmailDbRequest(email, FROM!, subject, message, scheduledFor, 'pending');
-        const result = await DbService.createEmail(emailDbRequest);
-        console.log(result);
+        const { email, subject, message, scheduledFor, timezone } = req.body as EmailApiRequest;
+        
+        // Schedule the email with timezone information
+        await SchedulerService.scheduleEmail({
+            email,
+            subject,
+            message,
+            scheduledFor,
+            timezone
+        });
 
-        res.status(200).json({ message: "Email sent successfully" });
+        res.status(200).json({ 
+            message: "Email scheduled successfully",
+            timezone: timezone || 'America/Los_Angeles' // Return the timezone used
+        });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Failed to send email" });
+        res.status(500).json({ error: "Failed to schedule email" });
     }
 };

@@ -3,4 +3,5 @@ export interface EmailApiRequest {
     subject: string;
     message: string;
     scheduledFor: string;
+    timezone?: string; // Optional timezone, defaults to server timezone (America/Los_Angeles)
 }
