@@ -101,7 +101,10 @@ export class SchedulerService {
                         id: nextScheduled.id,
                         scheduledForUTC: format(parseDate(nextScheduled.scheduled_for), "yyyy-MM-dd'T'HH:mm:ss'Z'"),
                         scheduledForServer: format(nextScheduledTime, "yyyy-MM-dd'T'HH:mm:ssXXX"),
-                        timeUntilDue: formatDistanceToNow(nextScheduledTime, { addSuffix: true })
+                        timeUntilDue: formatDistanceToNow(nextScheduledTime, { 
+                            addSuffix: true,
+                            includeSeconds: true
+                        })
                     });
                 }
             }
