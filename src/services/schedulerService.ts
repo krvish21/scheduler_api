@@ -32,8 +32,8 @@ export class SchedulerService {
     static async checkAndProcessEmails() {
         try {
             const pendingEmails: EmailDbRequest[] = await DbService.findAllPending();
-            // Get current time in server timezone
-            const currentTime = toZonedTime(new Date(), SERVER_TIMEZONE);
+            // Get current time in UTC
+            const currentTime = new Date();
 
             // Reset rate limiting counter if we're in a new time window
             if (currentTime.getTime() - this.lastProcessedTime >= RATE_LIMIT.timeWindowMs) {
@@ -43,7 +43,7 @@ export class SchedulerService {
 
             // Filter emails that are due within the processing window
             const dueEmails = pendingEmails.filter(email => {
-                const scheduledTime = convertToServerTime(email.scheduled_for);
+                const scheduledTime = parseDate(email.scheduled_for);
                 const timeDiff = differenceInMilliseconds(scheduledTime, currentTime);
                 return timeDiff <= 0 && timeDiff >= -PROCESSING_WINDOW_MS;
             });
@@ -86,33 +86,33 @@ export class SchedulerService {
                 // Log the next scheduled email
                 const nextScheduled = pendingEmails
                     .filter(email => {
-                        const scheduledTime = convertToServerTime(email.scheduled_for);
+                        const scheduledTime = parseDate(email.scheduled_for);
                         return scheduledTime.getTime() > currentTime.getTime();
                     })
                     .sort((a, b) => {
-                        const timeA = convertToServerTime(a.scheduled_for);
-                        const timeB = convertToServerTime(b.scheduled_for);
+                        const timeA = parseDate(a.scheduled_for);
+                        const timeB = parseDate(b.scheduled_for);
                         return timeA.getTime() - timeB.getTime();
                     })[0];
                 
                 if (nextScheduled) {
-                    const nextScheduledTime = convertToServerTime(nextScheduled.scheduled_for);
+                    const nextScheduledTime = parseDate(nextScheduled.scheduled_for);
                     const timeUntilNext = differenceInMilliseconds(nextScheduledTime, currentTime);
                     
                     // Debug log to check times
                     console.log('Time Debug:', {
-                        currentTime: format(currentTime, "yyyy-MM-dd'T'HH:mm:ssXXX"),
-                        scheduledTime: format(nextScheduledTime, "yyyy-MM-dd'T'HH:mm:ssXXX"),
+                        currentTime: format(currentTime, "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+                        scheduledTime: format(nextScheduledTime, "yyyy-MM-dd'T'HH:mm:ss'Z'"),
                         timeDiff: timeUntilNext,
                         serverTimezone: SERVER_TIMEZONE,
-                        currentTimeIST: format(currentTime, "yyyy-MM-dd'T'HH:mm:ssXXX"),
-                        scheduledTimeIST: format(nextScheduledTime, "yyyy-MM-dd'T'HH:mm:ssXXX")
+                        currentTimeIST: format(toZonedTime(currentTime, SERVER_TIMEZONE), "yyyy-MM-dd'T'HH:mm:ssXXX"),
+                        scheduledTimeIST: format(toZonedTime(nextScheduledTime, SERVER_TIMEZONE), "yyyy-MM-dd'T'HH:mm:ssXXX")
                     });
 
                     console.log('Next scheduled email:', {
                         id: nextScheduled.id,
-                        scheduledForUTC: format(parseDate(nextScheduled.scheduled_for), "yyyy-MM-dd'T'HH:mm:ss'Z'"),
-                        scheduledForServer: format(nextScheduledTime, "yyyy-MM-dd'T'HH:mm:ssXXX"),
+                        scheduledForUTC: format(nextScheduledTime, "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+                        scheduledForServer: format(toZonedTime(nextScheduledTime, SERVER_TIMEZONE), "yyyy-MM-dd'T'HH:mm:ssXXX"),
                         timeUntilDue: formatDistanceToNow(nextScheduledTime, { 
                             addSuffix: true,
                             includeSeconds: true
