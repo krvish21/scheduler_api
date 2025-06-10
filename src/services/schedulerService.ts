@@ -32,7 +32,8 @@ export class SchedulerService {
     static async checkAndProcessEmails() {
         try {
             const pendingEmails: EmailDbRequest[] = await DbService.findAllPending();
-            const currentTime = new Date();
+            // Convert current time to server timezone
+            const currentTime = toZonedTime(new Date(), SERVER_TIMEZONE);
 
             // Reset rate limiting counter if we're in a new time window
             if (currentTime.getTime() - this.lastProcessedTime >= RATE_LIMIT.timeWindowMs) {
