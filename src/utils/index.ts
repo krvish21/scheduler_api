@@ -18,11 +18,14 @@ export function parseDate(dateStr: string): Date {
 }
 
 export function convertToServerTime(utcTime: string): Date {
-    const date = parseDate(utcTime);
-    return toZonedTime(date, SERVER_TIMEZONE);
+    // First parse the UTC time
+    const utcDate = parseDate(utcTime);
+    // Then convert to server timezone
+    return toZonedTime(utcDate, SERVER_TIMEZONE);
 }
 
 export function convertToUTC(date: Date): Date {
-    // Since the input date is already in UTC, we just need to ensure it's properly formatted
-    return new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    // Convert the date to UTC
+    const utcDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    return utcDate;
 }

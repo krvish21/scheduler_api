@@ -32,7 +32,7 @@ export class SchedulerService {
     static async checkAndProcessEmails() {
         try {
             const pendingEmails: EmailDbRequest[] = await DbService.findAllPending();
-            // Convert current time to server timezone
+            // Get current time in server timezone
             const currentTime = toZonedTime(new Date(), SERVER_TIMEZONE);
 
             // Reset rate limiting counter if we're in a new time window
@@ -104,7 +104,9 @@ export class SchedulerService {
                         currentTime: format(currentTime, "yyyy-MM-dd'T'HH:mm:ssXXX"),
                         scheduledTime: format(nextScheduledTime, "yyyy-MM-dd'T'HH:mm:ssXXX"),
                         timeDiff: timeUntilNext,
-                        serverTimezone: SERVER_TIMEZONE
+                        serverTimezone: SERVER_TIMEZONE,
+                        currentTimeIST: format(currentTime, "yyyy-MM-dd'T'HH:mm:ssXXX"),
+                        scheduledTimeIST: format(nextScheduledTime, "yyyy-MM-dd'T'HH:mm:ssXXX")
                     });
 
                     console.log('Next scheduled email:', {
