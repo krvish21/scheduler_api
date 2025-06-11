@@ -104,3 +104,29 @@ export const listCompletedTasks = async (req: Request, res: Response) => {
         });
     }
 }
+
+export const deleteTask = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        
+        if (!id) {
+            return res.status(400).json({ 
+                error: "Task ID is required"
+            });
+        }
+
+        await DbService.deleteEmail(id);
+        
+        res.status(200).json({ 
+            message: "Task deleted successfully"
+        });
+    } catch (error) {
+        console.error('[Email Task] Failed to delete task:', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+        });
+        res.status(500).json({ 
+            error: "Failed to delete task"
+        });
+    }
+}

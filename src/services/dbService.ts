@@ -51,4 +51,15 @@ export class DbService {
             throw supabaseError;
         }
     }
+
+    static async deleteEmail(id: string) {
+        const { error: supabaseError } = await supabase.from('email')
+            .delete()
+            .eq('id', id);
+
+        if(supabaseError) {
+            console.error(supabaseError);
+            throw supabaseError;
+        }
+    }
 }
