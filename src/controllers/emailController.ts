@@ -10,7 +10,7 @@ const SERVER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Ame
 
 export const createTask = async (req: Request, res: Response) => {
     try {
-        const { email, subject, message, scheduledFor } = req.body as EmailApiRequest;
+        const { email, subject, message, scheduledFor, taskType } = req.body as EmailApiRequest;
         
         // Parse and validate the scheduled time
         const scheduledDate = parseISO(scheduledFor);
@@ -48,12 +48,14 @@ export const createTask = async (req: Request, res: Response) => {
             body: message,
             scheduled_for: utcScheduledTime.toISOString(),
             status: 'pending',
-            timezone: SERVER_TIMEZONE
+            timezone: SERVER_TIMEZONE,
+            task_type: taskType
         };
 
         console.info('[Email Task] Creating new task:', {
             to: email,
             subject,
+            taskType,
             originalTime: scheduledFor,
             utcTime: utcScheduledTime.toISOString(),
             serverTime: serverTime.toISOString(),
@@ -63,13 +65,15 @@ export const createTask = async (req: Request, res: Response) => {
         const response = await DbService.createEmail(payload);
         console.info('[Email Task] Task created successfully:', {
             scheduledTime: utcScheduledTime.toISOString(),
-            status: 'pending'
+            status: 'pending',
+            taskType
         });
 
         res.status(200).json({ 
             message: "Task created successfully",
             scheduledTime: utcScheduledTime.toISOString(),
-            timezone: SERVER_TIMEZONE
+            timezone: SERVER_TIMEZONE,
+            taskType
         });
     } catch (error) {
         console.error('[Email Task] Failed to create task:', {

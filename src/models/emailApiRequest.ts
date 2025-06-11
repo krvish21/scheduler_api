@@ -4,4 +4,5 @@ export interface EmailApiRequest {
     message: string;
     scheduledFor: string;
     timezone: string;
+    taskType: string;
 }
